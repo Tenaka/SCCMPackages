@@ -1,0 +1,152 @@
+SCCM 
+====
+
+1. PATH
+-------
+
+"C:\Program Files\Microsoft VS Code\Code.exe"
+
+2. FILE VERSION
+---------------
+1.147.0
+
+
+VISUAL STUDIO CODE - WINDOWS SYSTEM INSTALLER
+============================================
+
+1. SILENT INSTALL
+-----------------
+
+Download the Windows System Installer for your architecture.
+The x64 filename is VSCodeSetup-x64-<version>.exe. Replace <version>
+in the example with your downloaded version.
+
+Run as administrator, or deploy as SYSTEM with ConfigMgr or Intune.
+Save the example as a PowerShell script to return Setup's exit code.
+
+$installer = '.\VSCodeSetup-x64-<version>.exe'
+$arguments = @(
+    '/VERYSILENT'
+    '/SUPPRESSMSGBOXES'
+    '/SP-'
+    '/NORESTART'
+    '/NORESTARTAPPLICATIONS'
+    '/LOG="C:\Windows\Temp\VSCode-Install.log"'
+    '/MERGETASKS="addtopath,associatewithfiles,!runcode"'
+)
+$process = Start-Process -FilePath $installer -ArgumentList $arguments -Wait -PassThru
+exit $process.ExitCode
+
+The current installer can force-close applications during upgrades.
+Use /NOFORCECLOSEAPPLICATIONS to prevent forced closure if needed.
+
+2. DISABLE AUTOMATIC UPDATES
+----------------------------
+
+Use the machine-wide UpdateMode policy. The installer has no
+switch for disabling VS Code's built-in updater.
+
+Run as administrator or SYSTEM, ideally before the first launch.
+
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\VSCode" /v UpdateMode /t REG_SZ /d none /f
+
+  none       Disables the built-in updater, including manual checks.
+  manual     Disables automatic checks and allows manual checks.
+  start      Checks for updates when VS Code starts.
+  default    Allows automatic background checks.
+
+Group Policy path
+
+  Computer Configuration
+    Administrative Templates
+      Visual Studio Code
+        Update
+          UpdateMode
+
+Install the VS Code ADMX and matching ADML if needed. Enable the
+policy and select the desired mode. Restart VS Code after applying
+the policy if it is already running.
+
+Verify the registry value with this command.
+
+reg.exe query "HKLM\SOFTWARE\Policies\Microsoft\VSCode" /v UpdateMode
+
+ConfigMgr and Intune can still deploy new versions. Extension
+updates are controlled separately through extensions.autoUpdate.
+
+3. INSTALLER SWITCHES
+---------------------
+
+Interface and restart
+
+  /SILENT                 Hides the wizard and shows progress.
+  /VERYSILENT             Hides the wizard and progress window.
+  /SUPPRESSMSGBOXES        Suppresses most prompts in silent mode.
+  /SP-                    Skips the initial Setup confirmation.
+  /NOCANCEL               Blocks cancellation through the UI.
+  /NORESTART              Prevents a Windows reboot.
+  /RESTARTEXITCODE=3010   Returns 3010 if a successful install
+                          requires a reboot. Pair with /NORESTART.
+
+Applications in use
+
+  /CLOSEAPPLICATIONS         Lets Setup close locking applications.
+  /NOCLOSEAPPLICATIONS       Prevents Setup from closing them.
+  /FORCECLOSEAPPLICATIONS    Lets Setup force applications closed.
+  /NOFORCECLOSEAPPLICATIONS  Prevents forced closure.
+  /RESTARTAPPLICATIONS       Lets Setup reopen closed applications.
+  /NORESTARTAPPLICATIONS     Prevents Setup from reopening them.
+  /LOGCLOSEAPPLICATIONS      Adds closure diagnostics to the log.
+
+Logging and configuration
+
+  /LOG                        Logs to the temp directory.
+  /LOG="C:\path\install.log"   Logs to the specified file.
+  /DIR="C:\path"               Overrides the installation directory.
+  /LANG=english               Selects the installer language.
+  /SAVEINF="C:\path\setup.inf" Saves installer selections.
+  /LOADINF="C:\path\setup.inf" Loads saved selections.
+  /TASKS="task1,task2"         Selects only the listed tasks.
+  /MERGETASKS="task1,!task2"   Adds or removes tasks from the current
+                              selection. A ! prefix deselects a task.
+
+Other generic Inno Setup switches
+
+  /HELP or /?                 Displays installer help.
+  /GROUP="folder"             Sets the Start menu folder if supported.
+  /NOICONS                    Requests no Start menu program group.
+  /TYPE and /COMPONENTS        Require configured types or components.
+  /PASSWORD                   Applies to password-protected installers.
+  /ALLUSERS and /CURRENTUSER   Require an installer that allows scope
+                              overrides. Use the VS Code System Installer
+                              for machine-wide deployment.
+  /REDIRECTIONGUARD and /NOREDIRECTIONGUARD
+                              Control filesystem redirection protection
+                              where supported by the bundled version.
+  /NOSTYLE                    Disables custom installer styling where
+                              supported by the bundled version.
+
+4. VS CODE TASK NAMES
+---------------------
+
+  addtopath              Adds the VS Code bin folder to PATH.
+  associatewithfiles     Registers VS Code as an available editor.
+  addcontextmenufiles    Adds Open with Code for files in Explorer.
+  addcontextmenufolders  Adds Open with Code for folders in Explorer.
+  desktopicon            Creates a desktop shortcut.
+  runcode                Launches VS Code after silent setup where
+                         applicable. Use !runcode to suppress launch.
+  quicklaunchicon        Legacy task unavailable on supported Windows.
+
+Example with both Explorer context menus and no post-install launch
+
+/MERGETASKS="addcontextmenufiles,addcontextmenufolders,!runcode"
+
+5. REFERENCES
+--------------
+
+https://code.visualstudio.com/docs/setup/windows
+https://github.com/microsoft/vscode/blob/main/build/win32/code.iss
+https://jrsoftware.org/inno-setup/documentation/topic_setupcmdline.htm
+https://code.visualstudio.com/docs/enterprise/updates
+https://code.visualstudio.com/docs/enterprise/policies

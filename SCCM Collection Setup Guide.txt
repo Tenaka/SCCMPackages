@@ -1,0 +1,103 @@
+﻿Download VSC for System 
+https://code.visualstudio.com/docs/setup/windows
+
+
+New Application
+    Create Application
+        Manually Specify the App Info
+            Name 
+                Visual Studio Code 1.147.0     #Note, used as a Uninstall target within the collection
+        Complete Product Details
+        Browse to EXE for Icon
+        Add Deployment Type
+            Scripted Installer
+            Name
+            Add Share path
+            Add installation and Uninstall programs
+                powershell.exe -executionpolicy bypass -file Install.ps1
+                powershell.exe -executionpolicy bypass -file uninstall.ps1
+            Add Clause
+                Path
+                   C:\Program Files\Microsoft VS Code
+                File
+                    Code.exe
+            Property
+                Version
+            =
+                1.147.0.0
+            Next
+            Install Behaviour
+                Install for System
+                Whether or not user is logged on
+            Add Requirements
+                Select Operating System
+                Select All Windows 11 x64
+            All the remaining NEXTs
+
+Distribution Point
+    Add Disto Point Group
+
+
+AD
+    Create Software Group
+        SW_C_Visual Studio Code
+            ADD TEST client to Group
+            C - Computer
+            U - User
+            V - Virtual                
+ 
+ 
+Collections
+    SW_C_Visual Studio Code Install
+    Limit to all workstations
+    Add Rule
+        Query Rule
+        Name - SW_C_Visual Studio Code Install
+        Set Incremental Updates for collection
+        Edit and paste in the following, after updating the AD Group name
+ 
+        Collection INSTALL
+            select SMS_R_SYSTEM.ResourceID,SMS_R_SYSTEM.ResourceType,SMS_R_SYSTEM.Name,SMS_R_SYSTEM.SMSUniqueIdentifier,SMS_R_SYSTEM.ResourceDomainORWorkgroup,SMS_R_SYSTEM.Client from SMS_R_System where SMS_R_System.Name in (select distinct SMS_R_System.name from SMS_R_System where SecurityGroupName = "CHANGEME\\SW_C_Visual Studio Code_Install")
+ 
+    Update Collection Memebership
+    Refresh    
+        Ensure single client is present
+    May need to run the AD Group Discovery\System Discovery
+
+    SW_C_Visual Studio Code Install
+    Limit to all workstations
+    Add Rule
+        Query Rule
+        Name - SW_C_Visual Studio Code Install
+        Set Schedule full update to daily
+        Edit and paste in the following, after updating the AD Group name
+
+        Collection Uninstall
+            select SMS_R_SYSTEM.ResourceID,SMS_R_SYSTEM.ResourceType,SMS_R_SYSTEM.Name,SMS_R_SYSTEM.SMSUniqueIdentifier,SMS_R_SYSTEM.ResourceDomainORWorkgroup,SMS_R_SYSTEM.Client from SMS_R_System INNER JOIN SMS_G_System_AppClientState ON SMS_G_System_AppClientState.MachineName = SMS_R_System.Name WHERE  SMS_G_System_AppClientState.ComplianceState = "1" AND  SMS_G_System_AppClientState.AppName ="Visual Studio Code 1.147.0"
+ 
+ Before Advertising for Deployment, ensure the above collections are working correctly
+ 
+ 
+Deployment          
+Deploy Install
+    SW_C_Visual Studio Code Install
+    Next for DP Group
+    Install
+        Required (Computer Targeted Deployment, Available for User, if needed, but not for Admin accounts that log on to Servers)
+        ASAP for Schedule or future date for  larger package size, content will slowly download and wait for install schedule time and date
+        Display in Software Center and only show notifications for computer restarts
+        All the NEXTS
+         
+Deploy UnInstall
+    SW_C_Visual Studio Code Install - Ignore warning about collection being empty
+    Next for DP Group
+    Uninstall
+        Required (Computer Targeted Deployment, Available for User, if needed, but not for Admin accounts that log on to Servers)
+        ASAP for Schedule or future date for  larger package size, content will slowly download and wait for install schedule time and date
+        Display in Software Center and only show notifications for computer restarts
+        All the NEXTS
+        
+
+
+
+

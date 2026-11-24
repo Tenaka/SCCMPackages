@@ -1,0 +1,30 @@
+Download the extension as a .vsix on an internet-connected machine, copy it to the offline PC, then install it with code --install-extension. The example below uses Microsoft’s PowerShell extension, ms-vscode.powershell. code.visualstudio.com
+
+1. Download the VSIX on a connected machine
+Use the extension’s publisher, name, and exact version in the Marketplace URL. 2025.4.0 is an example release. Change it to the version you want to deploy. GitHub
+$publisher = 'ms-vscode'
+$extension = 'powershell'
+$version   = '2025.4.0'
+
+$fileName = '{0}.{1}-{2}.vsix' -f $publisher, $extension, $version
+$url = 'https://marketplace.visualstudio.com/_apis/public/gallery/publishers/{0}/vsextensions/{1}/{2}/vspackage' -f $publisher, $extension, $version
+
+Invoke-WebRequest -Uri $url -OutFile $fileName -ErrorAction Stop
+
+For extensions with platform-specific packages, append ?targetPlatform=win32-x64 or ?targetPlatform=win32-arm64 as appropriate. Use a version compatible with the VS Code build on the offline PC. GitHub
+
+2. Install and verify on the offline PC
+Copy the VSIX to C:\Deploy\VSIX or adjust the path below. For your VS Code System install, call code.cmd directly so the script works without relying on PATH. code.visualstudio.com
+$code = Join-Path $env:ProgramFiles 'Microsoft VS Code\bin\code.cmd'
+$vsix = 'C:\Deploy\VSIX\ms-vscode.powershell-2025.4.0.vsix'
+
+& $code --install-extension $vsix
+if ($LASTEXITCODE -ne 0) {
+    throw "VS Code extension installation failed with exit code $LASTEXITCODE."
+}
+
+& $code --list-extensions --show-versions
+
+For several extensions, repeat --install-extension with each VSIX path. Include any required dependency VSIX files in your deployment and install those first. Extensions that download runtimes or tools on first use can also need separate offline staging. VS Code disables auto-update by default for an extension installed from a VSIX. code.visualstudio.com
+
+ConfigMgr detail: The VS Code application can be installed as SYSTEM, but the extension command uses the account running it. Run the extension step in the user’s context so it installs into that user’s %USERPROFILE%\.vscode\extensions folder.
